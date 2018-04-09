@@ -175,8 +175,9 @@ class lidabox:
         data = self.get_rfid_data(quit_on_uid=self.uid)
 
         if data != None:
-            self.tolreadfails = 1 # tolerated RFID read fail
+            self.tolreadfails = 1 # set number of tolerated RFID read fails
         elif lastuid != None and self.tolreadfails > 0:
+            self.myprint("WARNING: Token read fail (tolerated)!")
             self.tolreadfails -= 1
             return # read fail is tolerated --> return
 
@@ -306,7 +307,7 @@ class lidabox:
     def loop(self):
         """"""
         if not self.gpm_logged_in:
-            self.myprint("ERROR: Not connected with Google Play Musik...")
+            self.myprint("ERROR: Not connected with Google Play Musik!")
             return None
 
         self.myprint("Waiting for token...")
