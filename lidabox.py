@@ -196,7 +196,7 @@ class lidabox:
             self.myprint("Token was removed.")
             self.stop_and_clear()
             if last_token_was_valid:
-                self.play_mp3("stop.mp3")
+                self.play_mp3("stop.mp3", block = True)
             self.myprint("Waiting for token...")
 
         else:
@@ -205,8 +205,8 @@ class lidabox:
                 self.play_mp3("found.mp3", block = True)
                 self.token_to_tracks()
             else:
-                self.play_mp3("invalid.mp3")
                 self.myprint("Token invalid!")
+                self.play_mp3("invalid.mp3", block = True)
 
 
     def token_is_valid(self):
