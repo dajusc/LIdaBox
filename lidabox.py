@@ -43,9 +43,7 @@ class lidabox:
 
     def __del__(self):
         self.stop_and_clear()
-#        self.gpm_client.logout() # Causes actual android device to log out
-        del(self.gpm_client)
-        del(self.rfid_client)
+        self.gpm_client.logout()
         RPi.GPIO.cleanup()
 
 
