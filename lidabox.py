@@ -205,6 +205,7 @@ class lidabox:
         if self.token_is_valid():
             for pl in self.gpm_plli:
                 if str(self.token).lower() in pl["name"].lower():
+                    self.halt   = True
                     self.tracks = list(pl["tracks"]) # list-items are still pointer! (copy.deepcopy would be too slow)
                     self.myprint("Playlist has {} titles.".format(len(self.tracks)))
                     for tra in self.tracks:
@@ -272,7 +273,10 @@ class lidabox:
                 if self.vlc_player.get_state() in [vlc.State.Error]:
                     self.myprint("ERROR: Playlist stopped unexpectingly!")
 
-            self.update_token()
+                if self.halt:
+                    self.stop()
+                    return
+
             if len(self.tracks):
                 del(self.tracks[0])
 
