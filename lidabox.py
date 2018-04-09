@@ -27,6 +27,7 @@ class lidabox:
         self.uid           = None # UID of RFID-card
         self.token         = None # name of item to be played (gpm-playlist-name)
         self.tracks        = []   # list of tracks (current playlist)
+        self.tolreadfails  = 0    # tolerated RFID read fails
 
         self.myprint("Connecting with Google Play Musik...")
         self.gpm_client    = gmusicapi.Mobileclient()
@@ -172,6 +173,12 @@ class lidabox:
         last_token_was_valid = self.token_is_valid()
 
         data = self.get_rfid_data(quit_on_uid=self.uid)
+
+        if data != None:
+            self.tolreadfails = 1 # tolerated RFID read fail
+        elif lastuid != None and self.tolreadfails > 0:
+            self.tolreadfails -= 1
+            return # read fail is tolerated --> return
 
         if data != None:
             self.uid = data["uid"]
