@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
 #
-# Create "/etc/xdg/autostart/lidabox.desktop" executing:
-# lxterminal --working-directory="/home/pi/Cloud/Dokumente/RaspberryPi/lidabox/" --command="python lidabox.py"
+# To configure autostart at PasPi-userlogin, just create "/etc/xdg/autostart/lidabox.desktop" containing:
+# > [Desktop Entry]
+# > Name=LIdaBox
+# > Exec=lxterminal --working-directory="/<PATHTO>/lidabox/" --command="python lidabox.py"
 
 import os, sys, string
 sys.path.append('../libraries/MFRC522-python.git/')
-import MFRC522
-import gmusicapi
-import vlc # package name: python-vlc
+import MFRC522   # https://github.com/mxgxw/MFRC522-python
+import gmusicapi # pip install gmusicapi
+import vlc       # pip install python-vlc
 import time
 import RPi.GPIO
 
@@ -35,7 +37,8 @@ class lidabox:
 
         self.myprint("Initializing RFID reader...")
         self.rfid_client = MFRC522.MFRC522()
-        #RPi.GPIO.setwarnings(False)
+        if not debug:
+            RPi.GPIO.setwarnings(False)
 
 
     def __del__(self):
@@ -167,8 +170,8 @@ class lidabox:
 
 
     def update_token(self):
-        lastuid         = self.uid
-        playsndonremove = self.token_is_valid()
+        lastuid              = self.uid
+        last_token_was_valid = self.token_is_valid()
 
         data = self.get_rfid_data(quit_on_uid=self.uid)
 
@@ -181,12 +184,12 @@ class lidabox:
             self.token = None
 
         if self.uid == lastuid:
-            return # do nothing
+            return # nothing changed --> do nothing
 
         elif self.uid == None:
             self.myprint("Token was removed.")
             self.stop_and_clear()
-            if playsndonremove:
+            if last_token_was_valid:
                 self.play_mp3("stop.mp3")
             self.myprint("Waiting for token...")
 
@@ -309,6 +312,7 @@ class lidabox:
             else:
                 self.play_tracks()
 
+#--
 
 if __name__ == "__main__":
     print "###################################################################"
