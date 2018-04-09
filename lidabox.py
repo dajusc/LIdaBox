@@ -61,6 +61,7 @@ class lidabox:
             if block:
                 while mp.get_state() in [vlc.State.NothingSpecial, vlc.State.Opening, vlc.State.Buffering, vlc.State.Playing]:
                     time.sleep(.1)
+                time.sleep(.1)
 
 
     def login_gpm(self):
@@ -81,17 +82,8 @@ class lidabox:
         data = {}
 
         def select_tag(cli, serNum):
-            backData = []
-            buf = []
-            buf.append(cli.PICC_SElECTTAG)
-            buf.append(0x70)
-            i = 0
-            while i<5:
-                buf.append(serNum[i])
-                i = i + 1
-            pOut = cli.CalulateCRC(buf)
-            buf.append(pOut[0])
-            buf.append(pOut[1])
+            buf =  [cli.PICC_SElECTTAG, 0x70] + serNum[:5]
+            buf += cli.CalulateCRC(buf)[:2]
             (status, backData, backLen) = cli.MFRC522_ToCard(cli.PCD_TRANSCEIVE, buf)
             if (status == cli.MI_OK) and (backLen == 0x18):
                 return backData[0]
@@ -99,12 +91,8 @@ class lidabox:
                 return 0
 
         def read_block(cli, blksiz, blkid):
-            recvData = []
-            recvData.append(cli.PICC_READ)
-            recvData.append(blksiz * blkid)
-            pOut = cli.CalulateCRC(recvData)
-            recvData.append(pOut[0])
-            recvData.append(pOut[1])
+            recvData =  [cli.PICC_READ, blksiz*blkid]
+            recvData += cli.CalulateCRC(recvData)[:2]
             (status, backData, backLen) = cli.MFRC522_ToCard(cli.PCD_TRANSCEIVE, recvData)
             if status == cli.MI_OK:
                 return (status, backData, backLen)
