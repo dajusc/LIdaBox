@@ -24,7 +24,7 @@ class lidabox:
         self.passw         = passw
         self.andid         = andid
         self.print_enabled = debug
-        self.uid           = None
+        self.uid           = None # UID of RFID-card
         self.token         = None # name of item to be played (gpm-playlist-name)
         self.tracks        = []   # list of tracks (current playlist)
 
@@ -182,7 +182,7 @@ class lidabox:
             self.token = None
 
         if self.uid == lastuid:
-            return # nothing changed --> do nothing
+            return # nothing changed --> return
 
         elif self.uid == None:
             self.myprint("Token was removed.")
