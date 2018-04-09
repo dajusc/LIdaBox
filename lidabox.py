@@ -163,9 +163,9 @@ class lidabox:
         data = self.get_rfid_data(quit_on_uid=self.uid)
 
         if data != None:
-            self.tolreadfails = 1 # set number of tolerated RFID read fails
+            self.tolreadfails = 0 # set number of tolerated RFID read fails
         elif lastuid != None and self.tolreadfails > 0:
-            self.myprint("WARNING: Token read fail (tolerated)!")
+            self.myprint("Token read fail (tolerated).")
             self.tolreadfails -= 1
             return # read fail is tolerated --> return
 
