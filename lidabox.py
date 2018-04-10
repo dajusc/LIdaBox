@@ -285,7 +285,7 @@ class lidabox:
                     self.myprint("ERROR: Playlist stopped unexpectingly!")
 
                 if self.halt:
-                    self.stop()
+                    self.vlc_player.stop()
                     return
 
             if len(self.tracks):
