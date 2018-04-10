@@ -198,7 +198,8 @@ class lidabox:
 
 
     def token_is_valid(self):
-        return str(self.token).lower() in [pl["name"].lower() for pl in self.gpm_plli]
+        pl_names = [pl["name"].lower() for pl in self.gpm_plli]
+        return str(self.token).lower() in pl_names
 
 
     def token_to_tracks(self):
