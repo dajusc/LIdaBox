@@ -211,7 +211,7 @@ class lidabox:
             self.myprint("Waiting for token...")
 
         else:
-            self.myprint("Token detected: \"{}\" (UID: {}).".format(self.token, self.uid))
+            self.myprint("Token detected: \"{}\" (UID: {}).".format(self.token, self.uid_to_str()))
             if self.token_is_valid():
                 self.play_mp3("found.mp3", block = True)
                 self.token_to_tracks()
@@ -220,13 +220,19 @@ class lidabox:
                 self.play_mp3("invalid.mp3", block = True)
 
 
+    def uid_to_str(self):
+        """If UID is contained in token dictionary, change token accordingly."""
+        return ".".join([str(i) for i in lb.uid])
+
+
     def uid_to_token(self, override=True):
         """If UID is contained in token dictionary, change token accordingly."""
-        if self.uid not in self.tokdic:
+        uid_str = self.uid_to_str()
+        if uid_str not in self.tokdic:
             return
         if not override and self.token != None:
             return
-        self.token = self.tokdic.get(self.uid, None)
+        self.token = self.tokdic.get(uid_str, None)
 
 
     def token_is_valid(self):
@@ -358,8 +364,7 @@ if __name__ == "__main__":
     email = "yourname@gmail.com" # Google-Account-Username or -email
     passw = "abcdefghijklmnopqr" # Google-App-Password (https://support.google.com/accounts/answer/185833)
     andid = "0123456789abcdef"   # Valid Android-ID registered to given Google-Account
-    tokdic = {[0,0,0,0,0]: "MyPlaylistName"} # Dictionary translating RFID-tag-UID to Google-Play-Music-playlist
-    tokdic = {[0,0,0,0,0]: "MyPlaylistName"} # Dict translating RFID-tag-UID to Google-Play-Music-playlist
+    tokdic = {"0.0.0.0.0": "MyPlaylistName"} # Dict translating RFID-tag-UID to Google-Play-Music-playlist
 
     if "lb" in locals(): del(lb)
     lb = lidabox(email, passw, andid, tokdic)
