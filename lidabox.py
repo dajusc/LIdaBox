@@ -17,12 +17,13 @@ import RPi.GPIO
 #--
 
 class lidabox:
-    def __init__(self, email, passw, andid, debug=True):
+    def __init__(self, email, passw, andid, tokdic={}, debug=True):
         self.play_mp3("start.mp3")
 
         self.email         = email
         self.passw         = passw
         self.andid         = andid
+        self.tokdic        = tokdic
         self.print_enabled = debug
         self.uid           = None # UID of RFID-card
         self.token         = None # name of item to be played (gpm-playlist-name)
@@ -173,6 +174,7 @@ class lidabox:
             self.uid = data["uid"]
             if self.uid != lastuid: # only update token if uid changed
                 self.token = data["strdata"]
+            self.uid_to_token() # if uid has entry in tokdic, override token
         else:
             self.uid   = None
             self.token = None
@@ -188,13 +190,21 @@ class lidabox:
             self.myprint("Waiting for token...")
 
         else:
-            self.myprint("Token detected: \"{}\".".format(self.token))
+            self.myprint("Token detected: \"{}\" (UID: {}).".format(self.token, self.uid))
             if self.token_is_valid():
                 self.play_mp3("found.mp3", block = True)
                 self.token_to_tracks()
             else:
                 self.myprint("Token invalid!")
                 self.play_mp3("invalid.mp3", block = True)
+
+
+    def uid_to_token(self, override=True):
+        if self.uid not in self.tokdic:
+            return
+        if not override and self.token != None:
+            return
+        self.token = self.tokdic.get(self.uid, None)
 
 
     def token_is_valid(self):
@@ -320,7 +330,9 @@ if __name__ == "__main__":
     email = "yourname@gmail.com" # Google-Account-Username or -email
     passw = "abcdefghijklmnopqr" # Google-App-Password (https://support.google.com/accounts/answer/185833)
     andid = "0123456789abcdef"   # Valid Android-ID registered to given Google-Account
+    tokdic = {[0,0,0,0,0]: "MyPlaylistName"} # Dictionary translating RFID-tag-UID to Google-Play-Music-playlist
+    tokdic = {[0,0,0,0,0]: "MyPlaylistName"} # Dict translating RFID-tag-UID to Google-Play-Music-playlist
 
     if "lb" in locals(): del(lb)
-    lb = lidabox(email, passw, andid)
+    lb = lidabox(email, passw, andid, tokdic)
     lb.loop()
