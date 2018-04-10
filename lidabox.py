@@ -24,7 +24,7 @@ class lidabox:
         self.passw         = passw
         self.andid         = andid
         self.tokdic        = tokdic
-        self.print_enabled = debug
+        self.debug         = debug
         self.uid           = None # UID of RFID-card
         self.token         = None # name of item to be played (gpm-playlist-name)
         self.tracks        = []   # list of tracks (current playlist)
@@ -39,7 +39,7 @@ class lidabox:
 
         self.myprint("Initializing RFID reader...")
         self.rfid_client = MFRC522.MFRC522()
-        if not debug:
+        if not self.debug:
             RPi.GPIO.setwarnings(False)
 
 
@@ -50,7 +50,7 @@ class lidabox:
 
 
     def myprint(self, text):
-        if self.print_enabled:
+        if self.debug:
             print text
 
 
