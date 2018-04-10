@@ -6,6 +6,23 @@
 # > Name=LIdaBox
 # > Exec=lxterminal --working-directory="/<PATHTO>/lidabox/" --command="python lidabox.py"
 
+"""@package lidabox
+    ~~~ LIdaBox by David Schaefer for his daugther ~~~
+
+    A RasPi application for a RFID controlled Google-Play-Music (GPM) musicbox.
+    The user can store the names of GPM-playlists on RFID-tags, or he can link
+    RFID-tag-UIDs to playlist names. Once the RC522-RFID-reader attached to the
+    RasPi detects a corresponding tag, it starts playing the playlist. The
+    playback is stopped when the end of the playlist is reached or when the tag
+    is removed.
+
+    To configure autostart at RasPi-userlogin, just create
+    "/etc/xdg/autostart/lidabox.desktop" containing:
+    > [Desktop Entry]
+    > Name=LIdaBox
+    > Exec=lxterminal --working-directory="/<PATHTO>/lidabox/" --command="python lidabox.py"
+"""
+
 import os, sys, string
 sys.path.append('../libraries/MFRC522-python.git/')
 import MFRC522   # https://github.com/mxgxw/MFRC522-python
@@ -55,6 +72,7 @@ class lidabox:
 
 
     def play_mp3(self, path, block=False):
+        """Playback a local audio file."""
         path = os.path.abspath(path)
         if os.path.exists(path):
             mp = vlc.MediaPlayer(path)
@@ -66,17 +84,19 @@ class lidabox:
 
 
     def login_gpm(self):
+        """Log into Google and fetch all user playlits from Google Play Music."""
         logged_in = self.gpm_client.login(self.email, self.passw, self.andid, locale="de_DE")
 
         if logged_in:
             self.gpm_plli = self.gpm_client.get_all_user_playlist_contents() # list of gpm-playlists
         else:
-            self.myprint("ERROR: Could not connect!")
+            self.myprint("ERROR: Could not login to Google!")
 
         return logged_in
 
 
     def get_rfid_data(self, cli=None, raw=False, quit_on_uid=None, debug=False):
+        """Read RFID-tag and return UID and contained data. If reading fails, return None."""
         if cli == None:
             cli=self.rfid_client
 
@@ -158,6 +178,7 @@ class lidabox:
 
 
     def update_token(self):
+        """Update token depending on the returnvalue of the RFID-reader."""
         lastuid              = self.uid
         last_token_was_valid = self.token_is_valid()
 
@@ -200,6 +221,7 @@ class lidabox:
 
 
     def uid_to_token(self, override=True):
+        """If UID is contained in token dictionary, change token accordingly."""
         if self.uid not in self.tokdic:
             return
         if not override and self.token != None:
@@ -208,11 +230,13 @@ class lidabox:
 
 
     def token_is_valid(self):
+        """Check if token is a valid Google-Play-Music playlist name."""
         pl_names = [pl["name"].lower() for pl in self.gpm_plli]
         return str(self.token).lower() in pl_names
 
 
     def token_to_tracks(self):
+        """Fill up playlist according to current token."""
         if self.token_is_valid():
             for pl in self.gpm_plli:
                 if str(self.token).lower() in pl["name"].lower():
@@ -228,6 +252,7 @@ class lidabox:
 
 
     def track_fetch_url(self, ind=0, force=True):
+        """Fetch VLC compatible streaming URL from Google-Play-Music."""
         if ind < 0 or ind > len(self.tracks)-1: # index out of range
             return
 
@@ -247,6 +272,7 @@ class lidabox:
 
 
     def play_tracks(self):
+        """Playback all tracks in playlist."""
         numtra = len(self.tracks)
         self.halt = False
         self.myprint("Starting playlist...")
@@ -296,11 +322,13 @@ class lidabox:
 
 
     def stop(self):
+        """Stop playback."""
         self.halt     = True
         self.vlc_player.stop()
 
 
     def stop_and_clear(self):
+        """Stop playback and reset everything by deleting UID, token and playlist."""
         self.stop()
         self.uid    = None
         self.token  = None
@@ -308,7 +336,7 @@ class lidabox:
 
 
     def loop(self):
-        """"""
+        """Main loop of the LIdaBox."""
         if not self.gpm_logged_in:
             self.myprint("ERROR: Not connected with Google Play Musik!")
             return None

@@ -1,3 +1,4 @@
 *.mp3
 *.desktop
 *.sh
+*.doxygen.cfg
