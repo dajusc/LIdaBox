@@ -29,12 +29,12 @@ import MFRC522   # https://github.com/mxgxw/MFRC522-python
 import gmusicapi # pip install gmusicapi
 import vlc       # pip install python-vlc
 import time
-import RPi.GPIO
+import RPi.GPIO as GPIO
 
 #--
 
 class lidabox:
-    def __init__(self, email, passw, andid, tokdic={}, debug=True):
+    def __init__(self, email, passw, andid, tokdic={}, shtdwnpin=None, instastart=True, debug=True):
         self.play_mp3("start.mp3")
 
         self.email         = email
@@ -42,10 +42,13 @@ class lidabox:
         self.andid         = andid
         self.tokdic        = tokdic
         self.debug         = debug
+        self.shtdwnpin     = shtdwnpin
         self.uid           = None # UID of RFID-card
         self.token         = None # name of item to be played (gpm-playlist-name)
         self.tracks        = []   # list of tracks (current playlist)
         self.tolreadfails  = 0    # tolerated RFID read fails
+
+        self.myprint("Starting LIdaBox...")
 
         self.myprint("Connecting with Google Play Musik...")
         self.gpm_client    = gmusicapi.Mobileclient()
@@ -56,14 +59,32 @@ class lidabox:
 
         self.myprint("Initializing RFID reader...")
         self.rfid_client = MFRC522.MFRC522()
-        if not self.debug:
-            RPi.GPIO.setwarnings(False)
+
+        self.myprint("Setting up GPIO...")
+        if self.shtdwnpin != None:
+            # GPIO.setmode(GPIO.BOARD) # already set to this mode by MFRC522
+#            GPIO.remove_event_detect(self.shtdwnpin)
+            GPIO.setup(self.shtdwnpin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+            GPIO.add_event_detect(self.shtdwnpin, GPIO.FALLING, callback=self.cb_shutdown, bouncetime=10000)
+
+        if instastart:
+            self.loop()
 
 
     def __del__(self):
         self.stop_and_clear()
         self.gpm_client.logout()
-        RPi.GPIO.cleanup()
+        if self.shtdwnpin != None:
+            GPIO.remove_event_detect(self.shtdwnpin)
+        GPIO.cleanup()
+        print "LIdaBox stopped!"
+
+
+    def cb_shutdown(self, channel):
+        print "interrupt detected at pin {}. SHUTTING DOWN SYSTEM in 5s!".format(self.shtdwnpin)
+        time.sleep(5)
+        self.__del__()
+        os.system("shutdown -h now")
 
 
     def myprint(self, text):
@@ -222,7 +243,7 @@ class lidabox:
 
     def uid_to_str(self):
         """If UID is contained in token dictionary, change token accordingly."""
-        return ".".join([str(i) for i in lb.uid])
+        return ".".join([str(i) for i in self.uid])
 
 
     def uid_to_token(self, override=True):
@@ -347,25 +368,28 @@ class lidabox:
             self.myprint("ERROR: Not connected with Google Play Musik!")
             return None
 
-        self.myprint("Waiting for token...")
-        while True:
-            self.update_token()
-            if len(self.tracks) == 0:
-                time.sleep(1)
-            else:
-                self.play_tracks()
+        try:
+            self.myprint("Waiting for token...")
+            while True:
+                self.update_token()
+                if len(self.tracks) == 0:
+                    time.sleep(1)
+                else:
+                    self.play_tracks()
+
+        except: # e.g. KeyboardInterrupt
+          self.__del__()
+          raise
+
 
 #--
 
 if __name__ == "__main__":
     print "###################################################################"
-    print "Starting LIdaBox..."
 
     email = "yourname@gmail.com" # Google-Account-Username or -email
     passw = "abcdefghijklmnopqr" # Google-App-Password (https://support.google.com/accounts/answer/185833)
     andid = "0123456789abcdef"   # Valid Android-ID registered to given Google-Account
     tokdic = {"0.0.0.0.0": "MyPlaylistName"} # Dict translating RFID-tag-UID to Google-Play-Music-playlist
 
-    if "lb" in locals(): del(lb)
-    lb = lidabox(email, passw, andid, tokdic)
-    lb.loop()
+    lidabox(email, passw, andid, tokdic, shtdwnpin=40)
