@@ -309,6 +309,8 @@ class lidabox:
             tra = self.tracks[0]
             url = tra["url"]
             tit = tra.get("track", {}).get("title", "UNKNOWN")
+            try:    tit = str(tit)
+            except: tit = ""
 
             self.myprint("Playing title {}/{} \"{}\"".format(1+numtra-len(self.tracks) , numtra, tit))
             if url != None:
