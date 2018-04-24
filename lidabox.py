@@ -43,6 +43,8 @@ class lidabox:
         self.tokdic        = tokdic
         self.debug         = debug
         self.shtdwnpin     = shtdwnpin
+        self.max_idle      = 300 # 300 sec = 5 min
+        self.cntdwn        = self.max_idle
         self.uid           = None # UID of RFID-card
         self.token         = None # name of item to be played (gpm-playlist-name)
         self.tracks        = []   # list of tracks (current playlist)
@@ -62,10 +64,8 @@ class lidabox:
 
         self.myprint("Setting up GPIO...")
         if self.shtdwnpin != None:
-            # GPIO.setmode(GPIO.BOARD) # already set to this mode by MFRC522
-#            GPIO.remove_event_detect(self.shtdwnpin)
-            GPIO.setup(self.shtdwnpin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            GPIO.add_event_detect(self.shtdwnpin, GPIO.FALLING, callback=self.cb_shutdown, bouncetime=10000)
+            GPIO.setup(self.shtdwnpin, GPIO.OUT)
+
 
         if instastart:
             self.loop()
@@ -80,11 +80,15 @@ class lidabox:
         print "LIdaBox stopped!"
 
 
-    def cb_shutdown(self, channel):
-        print "interrupt detected at pin {}. SHUTTING DOWN SYSTEM in 5s!".format(self.shtdwnpin)
+    def do_shutdown(self):
+        print "Maximum idle-time reached. SHUTTING DOWN SYSTEM in 5s!"
+        self.play_mp3("shutdown_winxp.mp3")
+        GPIO.output(self.shtdwnpin, GPIO.HIGH)
         time.sleep(5)
         self.__del__()
         os.system("shutdown -h now")
+        while (True):
+            time.sleep(1)
 
 
     def myprint(self, text):
@@ -376,8 +380,12 @@ class lidabox:
                 self.update_token()
                 if len(self.tracks) == 0:
                     time.sleep(1)
+                    self.cntdwn -= 1
+                    if self.cntdwn <= 0:
+                        self.do_shutdown()
                 else:
                     self.play_tracks()
+                    self.cntdwn = self.max_idle
 
         except: # e.g. KeyboardInterrupt
           self.__del__()
