@@ -237,6 +237,7 @@ class lidabox:
 
         else:
             self.myprint("Token detected: \"{}\" (UID: {}).".format(self.token, self.uid_to_str()))
+            self.stop()
             if self.token_is_valid():
                 self.play_mp3("found.mp3", block = True)
                 self.token_to_tracks()
