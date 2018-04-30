@@ -305,6 +305,14 @@ class lidabox:
 
     def play_tracks(self):
         """Playback all tracks in playlist."""
+
+        def to_valid_str(stri):
+            stri_new = ""
+            for c in stri:
+                try:    stri_new += str(c)
+                except: stri_new += "♡"
+            return stri_new
+
         numtra = len(self.tracks)
         self.halt = False
         self.myprint("Starting playlist...")
@@ -314,8 +322,7 @@ class lidabox:
             tra = self.tracks[0]
             url = tra["url"]
             tit = tra.get("track", {}).get("title", "UNKNOWN")
-            try:    tit = str(tit)
-            except: tit = ""
+            tit = to_valid_str(tit)
 
             self.myprint("Playing title {}/{} \"{}\"".format(1+numtra-len(self.tracks) , numtra, tit))
             if url != None:
