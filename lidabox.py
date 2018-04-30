@@ -47,6 +47,7 @@ class lidabox:
         self.cntdwn        = self.max_idle
         self.uid           = None # UID of RFID-card
         self.token         = None # name of item to be played (gpm-playlist-name)
+        self.volume        = 100 # playback volume (0 - 100)
         self.tracks        = []   # list of tracks (current playlist)
         self.tolreadfails  = 0    # tolerated RFID read fails
 
@@ -258,7 +259,8 @@ class lidabox:
             return
         if not override and self.token != None:
             return
-        self.token = self.tokdic.get(uid_str, None)
+        self.token  = self.tokdic.get(uid_str, {}).get("name", None)
+        self.volume = self.tokdic.get(uid_str, {}).get("volume", 100)
 
 
     def token_is_valid(self):
@@ -331,7 +333,9 @@ class lidabox:
                 self.vlc_player.play()
 
                 while self.vlc_player.get_state() in [vlc.State.NothingSpecial, vlc.State.Opening, vlc.State.Buffering]:
-                    time.sleep(.1)
+                    time.sleep(.01)
+
+                self.set_volume()
 
                 play_time_url  = self.vlc_player.get_length()*1e-3 - 5 # 5 seconds before title ends
                 real_time_rfid = time.time() + 1
@@ -362,9 +366,31 @@ class lidabox:
             self.myprint("Playlist finished normaly.")
 
 
+    def set_volume(self, volume=None, dms=500):
+        """Set audio volume (0-100). Works only during playback."""
+        if self.vlc_player.get_state() not in [vlc.State.Playing, vlc.State.Paused]:
+            return False
+
+        if volume == None:
+            volume = self.volume
+
+        volume = min(100, max(0, volume))
+
+        while self.vlc_player.audio_set_volume(volume) == -1 and dms > 0:
+            dms -= 1
+            time.sleep(.01)
+
+        if dms <= 0:
+            print "WARNING: Setting audio volume failed!"
+            return False
+        else:
+            return True
+
+
     def stop(self):
         """Stop playback."""
         self.halt     = True
+        self.set_volume(100)
         self.vlc_player.stop()
 
 
@@ -373,6 +399,7 @@ class lidabox:
         self.stop()
         self.uid    = None
         self.token  = None
+        self.token  = 100
         self.tracks = []
 
 
@@ -408,6 +435,6 @@ if __name__ == "__main__":
     email = "yourname@gmail.com" # Google-Account-Username or -email
     passw = "abcdefghijklmnopqr" # Google-App-Password (https://support.google.com/accounts/answer/185833)
     andid = "0123456789abcdef"   # Valid Android-ID registered to given Google-Account
-    tokdic = {"0.0.0.0.0": "MyPlaylistName"} # Dict translating RFID-tag-UID to Google-Play-Music-playlist
+    tokdic = {"0.0.0.0.0": {"name": "MyPlaylistName", "volume": 80}} # Dict translating RFID-tag-UID to Google-Play-Music-playlist
 
     lidabox(email, passw, andid, tokdic, shtdwnpin=40)
