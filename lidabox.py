@@ -34,7 +34,7 @@ import RPi.GPIO as GPIO
 #--
 
 class lidabox:
-    def __init__(self, email, passw, andid, tokdic={}, shtdwnpin=None, instastart=True, debug=True):
+    def __init__(self, email, passw, andid, tokdic={}, shtdwnpin=None, tmaxidle=None, instastart=True, debug=True):
         self.play_mp3("start.mp3")
 
         self.email         = email
@@ -43,8 +43,8 @@ class lidabox:
         self.tokdic        = tokdic
         self.debug         = debug
         self.shtdwnpin     = shtdwnpin
-        self.max_idle      = 300 # 300 sec = 5 min
-        self.cntdwn        = self.max_idle
+        self.tmaxidle      = tmaxidle # max idle time before system shuts down
+        self.tlast         = time.time() # time of last action
         self.uid           = None # UID of RFID-card
         self.token         = None # name of item to be played (gpm-playlist-name)
         self.volume        = 100 # playback volume (0 - 100)
@@ -80,8 +80,6 @@ class lidabox:
     def __del__(self):
         self.stop_and_clear()
         self.gpm_client.logout()
-        if self.shtdwnpin != None:
-            GPIO.remove_event_detect(self.shtdwnpin)
         GPIO.cleanup()
         print "LIdaBox stopped!"
 
@@ -89,12 +87,10 @@ class lidabox:
     def do_shutdown(self):
         print "Maximum idle-time reached. SHUTTING DOWN SYSTEM in 5s!"
         self.play_mp3("shutdown.mp3")
-        GPIO.output(self.shtdwnpin, GPIO.HIGH)
+        if self.shtdwnpin != None:
+            GPIO.output(self.shtdwnpin, GPIO.HIGH)
         time.sleep(5)
-        self.__del__()
         os.system("shutdown -h now")
-        while (True):
-            time.sleep(1)
 
 
     def myprint(self, text):
@@ -251,6 +247,8 @@ class lidabox:
                 self.myprint("Token invalid!")
                 self.play_mp3("invalid.mp3", block = True)
 
+        self.tlast = time.time()
+
 
     def uid_to_str(self):
         """If UID is contained in token dictionary, change token accordingly."""
@@ -369,6 +367,7 @@ class lidabox:
 
         if len(self.tracks) == 0 and not self.halt:
             self.myprint("Playlist finished normaly.")
+            self.tlast = time.time()
 
 
     def set_volume(self, volume=None, dms=500):
@@ -408,6 +407,15 @@ class lidabox:
         self.tracks = []
 
 
+    def maybe_shutdown(self):
+        """Shutdown if system has been idle longer than tmaxidle."""
+        if self.tmaxidle != None:
+            if time.time() - self.tlast >= self.tmaxidle:
+                self.do_shutdown()
+                return True
+        return False
+
+
     def loop(self):
         """Main loop of the LIdaBox."""
         if not self.gpm_logged_in:
@@ -420,16 +428,16 @@ class lidabox:
                 self.update_token()
                 if len(self.tracks) == 0:
                     time.sleep(1)
-                    self.cntdwn -= 1
-                    if self.cntdwn <= 0:
-                        self.do_shutdown()
+                    if self.maybe_shutdown():
+                        break
                 else:
                     self.play_tracks()
-                    self.cntdwn = self.max_idle
 
         except: # e.g. KeyboardInterrupt
-          self.__del__()
-          raise
+            self.__del__()
+            raise
+
+        print "Main loop finished."
 
 
 #--
@@ -442,4 +450,5 @@ if __name__ == "__main__":
     andid = "0123456789abcdef"   # Valid Android-ID registered to given Google-Account
     tokdic = {"0.0.0.0.0": {"name": "MyPlaylistName", "volume": 80}} # Dict translating RFID-tag-UID to Google-Play-Music-playlist
 
-    lidabox(email, passw, andid, tokdic, shtdwnpin=40)
+
+    lidabox(email, passw, andid, tokdic, tmaxidle=300, shtdwnpin=40)
