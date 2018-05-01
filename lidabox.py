@@ -67,6 +67,11 @@ class lidabox:
         if self.shtdwnpin != None:
             GPIO.setup(self.shtdwnpin, GPIO.OUT)
 
+        self.myprint("Checking MP3s...")
+        for fn in ["start", "stop", "found", "invalid", "shutdown"]:
+            fn += ".mp3"
+            if not os.path.exists(fn):
+                print "WARNING: {} not found.".format(fn)
 
         if instastart:
             self.loop()
@@ -83,7 +88,7 @@ class lidabox:
 
     def do_shutdown(self):
         print "Maximum idle-time reached. SHUTTING DOWN SYSTEM in 5s!"
-        self.play_mp3("shutdown_winxp.mp3")
+        self.play_mp3("shutdown.mp3")
         GPIO.output(self.shtdwnpin, GPIO.HIGH)
         time.sleep(5)
         self.__del__()
