@@ -28,7 +28,7 @@ sys.path.append('../libraries/MFRC522-python.git/')
 import MFRC522   # https://github.com/mxgxw/MFRC522-python
 import gmusicapi # pip install gmusicapi
 import vlc       # pip install python-vlc
-import time
+import time, uptime
 import RPi.GPIO as GPIO
 
 #--
@@ -44,7 +44,7 @@ class lidabox:
         self.debug         = debug
         self.shtdwnpin     = shtdwnpin
         self.tmaxidle      = tmaxidle # max idle time before system shuts down
-        self.tlast         = time.time() # time of last action
+        self.tlast         = None # time of last action
         self.uid           = None # UID of RFID-card
         self.token         = None # name of item to be played (gpm-playlist-name)
         self.volume        = 100 # playback volume (0 - 100)
@@ -87,9 +87,9 @@ class lidabox:
     def do_shutdown(self):
         print "Maximum idle-time reached. SHUTTING DOWN SYSTEM in 5s!"
         self.play_mp3("shutdown.mp3")
+        time.sleep(5)
         if self.shtdwnpin != None:
             GPIO.output(self.shtdwnpin, GPIO.HIGH)
-        time.sleep(5)
         os.system("shutdown -h now")
 
 
@@ -247,7 +247,7 @@ class lidabox:
                 self.myprint("Token invalid!")
                 self.play_mp3("invalid.mp3", block = True)
 
-        self.tlast = time.time()
+        self.tlast = uptime.uptime()
 
 
     def uid_to_str(self):
@@ -341,7 +341,7 @@ class lidabox:
                 self.set_volume()
 
                 play_time_url  = self.vlc_player.get_length()*1e-3 - 5 # 5 seconds before title ends
-                real_time_rfid = time.time() + 1
+                real_time_rfid = uptime.uptime() + 1
 
                 while self.vlc_player.get_state() in [vlc.State.Playing, vlc.State.Paused] and not self.halt:
                     time.sleep(.1)
@@ -351,9 +351,9 @@ class lidabox:
                         self.track_fetch_url(1) # prefetching url for next title
                         play_time_url += 10000
 
-                    if time.time() > real_time_rfid:
+                    if uptime.uptime() > real_time_rfid:
                         self.update_token()
-                        real_time_rfid = time.time() + 1
+                        real_time_rfid = uptime.uptime() + 1
 
                 if self.vlc_player.get_state() in [vlc.State.Error]:
                     self.myprint("ERROR: Playlist stopped unexpectingly!")
@@ -367,7 +367,6 @@ class lidabox:
 
         if len(self.tracks) == 0 and not self.halt:
             self.myprint("Playlist finished normaly.")
-            self.tlast = time.time()
 
 
     def set_volume(self, volume=None, dms=500):
@@ -410,7 +409,8 @@ class lidabox:
     def maybe_shutdown(self):
         """Shutdown if system has been idle longer than tmaxidle."""
         if self.tmaxidle != None:
-            if time.time() - self.tlast >= self.tmaxidle:
+            tdiff = uptime.uptime() - self.tlast
+            if tdiff >= self.tmaxidle:
                 self.do_shutdown()
                 return True
         return False
@@ -424,6 +424,7 @@ class lidabox:
 
         try:
             self.myprint("Waiting for token...")
+            self.tlast = uptime.uptime()
             while True:
                 self.update_token()
                 if len(self.tracks) == 0:
@@ -432,6 +433,7 @@ class lidabox:
                         break
                 else:
                     self.play_tracks()
+                    self.tlast = uptime.uptime()
 
         except: # e.g. KeyboardInterrupt
             self.__del__()
