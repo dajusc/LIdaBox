@@ -402,7 +402,6 @@ class lidabox:
         self.stop()
         self.uid    = None
         self.token  = None
-        self.token  = 100
         self.tracks = []
 
 
