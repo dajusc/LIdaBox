@@ -50,6 +50,9 @@ class lidabox:
         self.volume        = 100 # playback volume (0 - 100)
         self.tracks        = []   # list of tracks (current playlist)
         self.tolreadfails  = 0    # tolerated RFID read fails
+        self.token_last    = None # last successfully recognized token
+        self.track_last    = None # last track played
+        self.time_last     = None # last time of last track played
 
         self.myprint("Starting LIdaBox...")
 
@@ -318,9 +321,19 @@ class lidabox:
                 except: stri_new += "♡"
             return stri_new
 
-        numtra = len(self.tracks)
+        tramax = len(self.tracks)
+        settratime = False
         self.halt = False
-        self.myprint("Starting playlist...")
+
+        if self.token != self.token_last:
+            self.myprint("Starting playlist...")
+        else:
+            self.myprint("Continuing playlist...")
+            self.tracks = self.tracks[self.track_last:]
+            if self.time_last != None:
+                settratime = True
+
+        self.token_last = self.token
 
         while len(self.tracks) > 0 and not self.halt:
             self.track_fetch_url(0, force=False) # fetch url for current title, if not already fetched
@@ -329,11 +342,18 @@ class lidabox:
             tit = tra.get("track", {}).get("title", "UNKNOWN")
             tit = to_valid_str(tit)
 
-            self.myprint("Playing title {}/{} \"{}\"".format(1+numtra-len(self.tracks) , numtra, tit))
+            tranow = tramax - len(self.tracks)
+            self.track_last = tranow
+            self.myprint("Playing title {}/{} \"{}\"".format(tranow+1 , tramax, tit))
             if url != None:
                 self.vlc_player.stop()
                 self.vlc_player.set_mrl(url)
                 self.vlc_player.play()
+
+                if settratime:
+                    self.time_last = max(0, self.time_last - 3000)
+                    self.vlc_player.set_time(self.time_last)
+                    settratime = False
 
                 while self.vlc_player.get_state() in [vlc.State.NothingSpecial, vlc.State.Opening, vlc.State.Buffering]:
                     time.sleep(.01)
@@ -346,8 +366,9 @@ class lidabox:
                 while self.vlc_player.get_state() in [vlc.State.Playing, vlc.State.Paused] and not self.halt:
                     time.sleep(.1)
 
-                    if self.vlc_player.get_time()*1e-3 > play_time_url:
-                        # self.myprint("Fetching URL for next title...")
+                    self.time_last = self.vlc_player.get_time()
+
+                    if self.time_last*1e-3 > play_time_url:
                         self.track_fetch_url(1) # prefetching url for next title
                         play_time_url += 10000
 
