@@ -4,7 +4,7 @@
 # To configure autostart at PasPi-userlogin, just create "/etc/xdg/autostart/lidabox.desktop" containing:
 # > [Desktop Entry]
 # > Name=LIdaBox
-# > Exec=lxterminal --working-directory="/<PATHTO>/lidabox/" --command="python lidabox.py"
+# > Exec=lxterminal --working-directory="/<PATHTO>/LIdaBox.git/" --command="python lidabox.py"
 
 """@package lidabox
     ~~~ LIdaBox by David Schaefer for his daugther ~~~
@@ -24,7 +24,7 @@
 """
 
 import os, sys, string
-sys.path.append('../libraries/MFRC522-python.git/')
+sys.path.append('./MFRC522-python.git/')
 import MFRC522   # https://github.com/mxgxw/MFRC522-python
 import gmusicapi # pip install gmusicapi
 import vlc       # pip install python-vlc
