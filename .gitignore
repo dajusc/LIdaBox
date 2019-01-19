@@ -3,4 +3,7 @@
 *.sh
 *.doxygen.cfg
 *.odt
+*.png
+*.svg
+*.jpg
 MFRC522-python.git
