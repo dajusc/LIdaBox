@@ -255,7 +255,7 @@ class lidabox:
 
     def uid_to_str(self):
         """If UID is contained in token dictionary, change token accordingly."""
-        return ".".join([str(i) for i in self.uid])
+        return ".".join([str(i) for i in self.uid[:4]])
 
 
     def uid_to_token(self, override=True):
