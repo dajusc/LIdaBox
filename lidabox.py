@@ -248,6 +248,7 @@ class lidabox:
                 self.token_to_tracks()
             else:
                 self.myprint("Token invalid!")
+                self.stop_and_clear()
                 self.play_mp3("invalid.mp3", block = True)
 
         self.tlast = uptime.uptime()
@@ -388,6 +389,7 @@ class lidabox:
 
         if len(self.tracks) == 0 and not self.halt:
             self.myprint("Playlist finished normaly.")
+            self.token_last = None # start from beginning if same token is removed and then applied again
 
 
     def set_volume(self, volume=None, dms=500):
