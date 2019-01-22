@@ -1,0 +1,1 @@
+This is a dummy file. Replace it by a real MP3-file named "found.mp3" and it will be played every time the LIdaBox script shuts down after tmaxidle has passed.
