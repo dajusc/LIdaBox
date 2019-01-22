@@ -5,5 +5,5 @@
 *.odt
 *.png
 *.svg
-*.jpg
+#*.jpg
 MFRC522-python.git
