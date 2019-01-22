@@ -1,10 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf8 -*-
-#
-# To configure autostart at PasPi-userlogin, just create "/etc/xdg/autostart/lidabox.desktop" containing:
-# > [Desktop Entry]
-# > Name=LIdaBox
-# > Exec=lxterminal --working-directory="/<PATHTO>/LIdaBox.git/" --command="python lidabox.py"
 
 """@package lidabox
     ~~~ LIdaBox by David Schaefer for his daugther ~~~
@@ -16,11 +11,11 @@
     playback is stopped when the end of the playlist is reached or when the tag
     is removed.
 
-    To configure autostart at RasPi-userlogin, just create
-    "/etc/xdg/autostart/lidabox.desktop" containing:
-    > [Desktop Entry]
-    > Name=LIdaBox
-    > Exec=lxterminal --working-directory="/<PATHTO>/lidabox/" --command="python lidabox.py"
+     To configure autostart at PasPi-userlogin, just create
+     "/etc/xdg/autostart/lidabox.desktop" containing:
+     > [Desktop Entry]
+     > Name=LIdaBox
+     > Exec=lxterminal --working-directory="/<PATH>/<TO>/<LIdaBox>/" --command="python lidabox.py"
 """
 
 import os, sys, string
@@ -31,7 +26,6 @@ import vlc       # pip install python-vlc
 import time, uptime
 import RPi.GPIO as GPIO
 
-#--
 
 class lidabox:
     def __init__(self, email, passw, andid, tokdic={}, shtdwnpin=None, tmaxidle=None, instastart=True, debug=True):
@@ -464,7 +458,7 @@ class lidabox:
         print "Main loop finished."
 
 
-#--
+#------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     print "###################################################################"
@@ -474,5 +468,4 @@ if __name__ == "__main__":
     andid = "0123456789abcdef"   # Valid Android-ID registered to given Google-Account
     tokdic = {"0.0.0.0.0": {"name": "MyPlaylistName", "volume": 80}} # Dict translating RFID-tag-UID to Google-Play-Music-playlist
 
-
-    lidabox(email, passw, andid, tokdic, tmaxidle=300, shtdwnpin=40)
+    lidabox(email, passw, andid, tokdic, tmaxidle=3600, shtdwnpin=40)
