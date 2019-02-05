@@ -29,7 +29,6 @@ import RPi.GPIO as GPIO
 
 class lidabox:
     def __init__(self, email, passw, andid, tokdic={}, shtdwnpin=None, tmaxidle=None, instastart=True, debug=True):
-        self.play_mp3("start.mp3")
 
         self.email         = email
         self.passw         = passw
@@ -47,8 +46,10 @@ class lidabox:
         self.token_last    = None # last successfully recognized token
         self.track_last    = None # last track played
         self.time_last     = None # last time of last track played
+        self.mediadir      = "media"
 
         self.myprint("Starting LIdaBox...")
+        self.play_mp3("start.mp3")
 
         self.myprint("Connecting with Google Play Musik...")
         self.gpm_client    = gmusicapi.Mobileclient()
@@ -65,10 +66,10 @@ class lidabox:
             GPIO.setup(self.shtdwnpin, GPIO.OUT)
 
         self.myprint("Checking MP3s...")
-        for fn in ["start", "stop", "found", "invalid", "shutdown"]:
-            fn += ".mp3"
-            if not os.path.exists(fn):
-                print "WARNING: {} not found.".format(fn)
+        for path in ["start", "stop", "found", "invalid", "shutdown"]:
+            path = os.path.join(self.mediadir, path) + ".mp3"
+            if not os.path.exists(path):
+                print "WARNING: {} not found.".format(path)
 
         if instastart:
             self.loop()
@@ -97,7 +98,8 @@ class lidabox:
 
     def play_mp3(self, path, block=False):
         """Playback a local audio file."""
-        path = os.path.abspath(path)
+        if not os.path.exists(path):
+            path = os.path.join(self.mediadir, path)
         if os.path.exists(path):
             mp = vlc.MediaPlayer(path)
             mp.play()
