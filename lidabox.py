@@ -275,29 +275,59 @@ class lidabox:
     def token_to_tracks(self):
         """Fill up playlist according to current token."""
         if self.token_is_valid():
-            for pl in self.gpm_plli:
-                if str(self.token).lower() in pl["name"].lower():
-                    self.halt   = True
-                    self.tracks = list(pl["tracks"]) # list-items are still pointer! (copy.deepcopy would be too slow)
-                    self.myprint("Playlist has {} titles.".format(len(self.tracks)))
-                    for tra in self.tracks:
-                        tra["url"] = None
-                    break
+            found_pl = self.token_to_tracks_local()
+            if not found_pl:
+                self.token_to_tracks_streaming()
+            self.myprint("Playlist has {} titles.".format(len(self.tracks)))
+            self.halt = True
         else:
             self.myprint("ERROR: Playlist not found!")
             self.stop_and_clear()
 
 
-    def track_fetch_url(self, ind=0, force=True):
+    def token_to_tracks_local(self):
+        """Fill up playlist according to current token using local files."""
+        if self.token_is_valid():
+            found_pl = False
+            for pl_nam in os.listdir(self.mediadir):
+                pl_pth = os.path.join(self.mediadir, pl_nam)
+                if os.path.isdir(pl_pth) and str(self.token).lower() in pl_nam.lower():
+                    found_pl = True
+                    self.tracks    = []
+                    for fnam in sorted(os.listdir(pl_pth)):
+                        tnam,fext = os.path.splitext(fnam)
+                        if fext.lower() in [".mp3", ".wav", ".ogg"]:
+                            tra = {}
+                            tra["url"] = os.path.join(self.mediadir, pl_nam, fnam)
+                            tra["islocal"] = True
+                            tra["track"] = {}
+                            tra["track"]["title"] = tnam
+                            self.tracks.append(tra)
+                    break
+            return found_pl
+
+
+    def token_to_tracks_streaming(self):
+        """Fill up playlist according to current token using gpm."""
+        if self.token_is_valid():
+            found_pl = False
+            for pl in self.gpm_plli:
+                if str(self.token).lower() in pl["name"].lower():
+                    found_pl = True
+                    self.tracks = list(pl["tracks"]) # list-items are still pointer! (copy.deepcopy would be too slow)
+                    for tra in self.tracks:
+                        tra["url"]     = None
+                        tra["islocal"] = False
+                    break
+            return found_pl
+
+
+    def track_fetch_url(self, ind=0):
         """Fetch VLC compatible streaming URL from Google-Play-Music."""
         if ind < 0 or ind > len(self.tracks)-1: # index out of range
             return
 
         tra = self.tracks[ind]
-        url = tra.get("url", None)
-        if url != None and force == False:
-            return
-
         tid = tra.get("storeId", tra.get("trackId", tra.get("id", tra.get("nid", None))))
         try:
             url = self.gpm_client.get_stream_url(tid, self.andid)
@@ -333,7 +363,9 @@ class lidabox:
         self.token_last = self.token
 
         while len(self.tracks) > 0 and not self.halt:
-            self.track_fetch_url(0, force=False) # fetch url for current title, if not already fetched
+            if self.tracks[0].get("url", None) == None:
+                self.track_fetch_url(0) # fetch url for current title, if not already fetched
+
             tra = self.tracks[0]
             url = tra["url"]
             tit = tra.get("track", {}).get("title", "UNKNOWN")
@@ -343,8 +375,11 @@ class lidabox:
             self.track_last = tranow
             self.myprint("Playing title {}/{} \"{}\"".format(tranow+1 , tramax, tit))
             if url != None:
-                self.vlc_player.stop()
-                self.vlc_player.set_mrl(url)
+                if url.startswith("https"):
+                    self.vlc_player.stop()
+                    self.vlc_player.set_mrl(url)
+                else:
+                    self.vlc_player = vlc.MediaPlayer(url)
                 self.vlc_player.play()
 
                 if settratime:
