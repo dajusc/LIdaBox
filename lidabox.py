@@ -357,7 +357,7 @@ class lidabox:
 
                 self.set_volume()
 
-                play_time_url  = self.vlc_player.get_length()*1e-3 - 5 # 5 seconds before title ends
+#                play_time_url  = self.vlc_player.get_length()*1e-3 - 5 # 5 seconds before title ends
                 real_time_rfid = uptime.uptime() + 1
 
                 while self.vlc_player.get_state() in [vlc.State.Playing, vlc.State.Paused] and not self.halt:
@@ -365,9 +365,9 @@ class lidabox:
 
                     self.time_last = self.vlc_player.get_time()
 
-                    if self.time_last*1e-3 > play_time_url:
-                        self.track_fetch_url(1) # prefetching url for next title
-                        play_time_url += 10000
+#                    if self.time_last*1e-3 > play_time_url:
+#                        self.track_fetch_url(1) # prefetching url for next title
+#                        play_time_url += 10000
 
                     if uptime.uptime() > real_time_rfid:
                         self.update_token()
