@@ -67,7 +67,7 @@ class lidabox:
 
         self.myprint("Checking MP3s...")
         for path in ["start", "stop", "found", "invalid", "shutdown"]:
-            path = os.path.join(self.mediadir, path) + ".mp3"
+            path = os.path.join(".", self.mediadir, path) + ".mp3"
             if not os.path.exists(path):
                 print "WARNING: {} not found.".format(path)
 
@@ -99,7 +99,7 @@ class lidabox:
     def play_mp3(self, path, block=False):
         """Playback a local audio file."""
         if not os.path.exists(path):
-            path = os.path.join(self.mediadir, path)
+            path = os.path.join(".", self.mediadir, path)
         if os.path.exists(path):
             mp = vlc.MediaPlayer(path)
             mp.play()
@@ -298,7 +298,7 @@ class lidabox:
                         tnam,fext = os.path.splitext(fnam)
                         if fext.lower() in [".mp3", ".wav", ".ogg"]:
                             tra = {}
-                            tra["url"] = os.path.join(self.mediadir, pl_nam, fnam)
+                            tra["url"] = os.path.join(".", self.mediadir, pl_nam, fnam)
                             tra["islocal"] = True
                             tra["track"] = {}
                             tra["track"]["title"] = tnam
@@ -373,13 +373,13 @@ class lidabox:
 
             tranow = tramax - len(self.tracks)
             self.track_last = tranow
-            self.myprint("Playing title {}/{} \"{}\"".format(tranow+1 , tramax, tit))
+            self.myprint("Playing title {}/{} \"{}\" ({})".format(tranow+1 , tramax, tit, ["Stream","MP3"][int(tra["islocal"])]))
             if url != None:
-                if url.startswith("https"):
+                if tra["islocal"]:
+                    self.vlc_player = vlc.MediaPlayer(url)
+                else:
                     self.vlc_player.stop()
                     self.vlc_player.set_mrl(url)
-                else:
-                    self.vlc_player = vlc.MediaPlayer(url)
                 self.vlc_player.play()
 
                 if settratime:
