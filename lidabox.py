@@ -409,7 +409,7 @@ class lidabox:
                         real_time_rfid = uptime.uptime() + 1
 
                 if self.vlc_player.get_state() in [vlc.State.Error]:
-                    self.myprint("ERROR: Playlist stopped unexpectingly!")
+                    self.myprint("ERROR: Playback of title stopped unexpectingly!")
 
                 if self.halt:
                     self.vlc_player.stop()
