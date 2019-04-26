@@ -16,3 +16,7 @@ Exec=lxterminal --working-directory="/<PATH>/<TO>/<LIdaBox>/" --command="python 
 
 ## Credits
 LIdaBox uses [gmusicapi](https://github.com/simon-weber/gmusicapi) by Simon Weber, [MFRC522-python](https://github.com/mxgxw/MFRC522-python) by mxgxw, and VLC media player.
+
+## Hardware Example
+
+![IMAGE OF LIdaBox MISSING](https://raw.githubusercontent.com/dajusc/LIdaBox/master/lidabox_inside.jpg)
