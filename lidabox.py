@@ -28,7 +28,7 @@ import RPi.GPIO as GPIO
 
 
 class lidabox:
-    def __init__(self, email, passw, andid, tokdic={}, shtdwnpin=None, tmaxidle=None, instastart=True, debug=True):
+    def __init__(self, tokdic, email="", passw="", andid="", shtdwnpin=None, tmaxidle=None, instastart=True, debug=True):
 
         self.email         = email
         self.passw         = passw
@@ -47,13 +47,12 @@ class lidabox:
         self.track_last    = None # last track played
         self.time_last     = None # last time of last track played
         self.mediadir      = "media"
+        self.playlists     = []
+        self.gpm_client    = None
+        self.gpm_logged_in = False
 
         self.myprint("Starting LIdaBox...")
         self.play_mp3("start.mp3")
-
-        self.myprint("Connecting with Google Play Musik...")
-        self.gpm_client    = gmusicapi.Mobileclient()
-        self.gpm_logged_in = self.login_gpm()
 
         self.myprint("Initializing VLC mediaplayer...")
         self.vlc_player    = vlc.MediaPlayer()
@@ -64,6 +63,9 @@ class lidabox:
         self.myprint("Setting up GPIO...")
         if self.shtdwnpin != None:
             GPIO.setup(self.shtdwnpin, GPIO.OUT)
+
+        self.myprint("Updating Playlists...")
+        self.update_playlists()
 
         self.myprint("Checking MP3s...")
         for path in ["start", "stop", "found", "invalid", "shutdown"]:
@@ -77,7 +79,8 @@ class lidabox:
 
     def __del__(self):
         self.stop_and_clear()
-        self.gpm_client.logout()
+        if self.gpm_logged_in:
+            self.gpm_client.logout()
         GPIO.cleanup()
         print "LIdaBox stopped!"
 
@@ -109,16 +112,56 @@ class lidabox:
                 time.sleep(.1)
 
 
+    def update_playlists(self):
+        """Update list of playlist using local files and (maybe) gpm."""
+        self.playlists = []
+
+        for pl_nam in os.listdir(self.mediadir): # update from local
+            pl_pth = os.path.join(self.mediadir, pl_nam)
+            if os.path.isdir(pl_pth):
+                pl = {}
+                pl["name"]   = pl_nam
+                pl["tracks"] = []
+                for fnam in sorted(os.listdir(pl_pth)):
+                    tnam,fext = os.path.splitext(fnam)
+                    if fext.lower() in [".mp3", ".wav", ".ogg"]:
+                        tra = {}
+                        tra["islocal"] = True
+                        tra["url"]     = os.path.join(".", self.mediadir, pl_nam, fnam)
+                        tra["track"]   = {"title":tnam}
+                        pl["tracks"].append(tra)
+                self.playlists.append(pl)
+
+        if self.gpm_logged_in: # update from gpm
+            gpm_pls = self.gpm_client.get_all_user_playlist_contents()
+            for pl in gpm_pls:
+                for tra in pl["tracks"]:
+                    tra["islocal"] = False
+                    tra["url"]     = None
+            self.playlists += gpm_pls
+
+
+    def get_playlists_names(self):
+        return [pl["name"].lower() for pl in self.playlists]
+
+
     def login_gpm(self):
         """Log into Google and fetch all user playlits from Google Play Music."""
-        logged_in = self.gpm_client.login(self.email, self.passw, self.andid, locale="de_DE")
+        self.myprint("Connecting to Google Play Musik...")
+        if self.gpm_logged_in: # already logged in
+            self.myprint("WARNING: Already logged in.")
+            return
+        if any([s == "" for s in [self.email, self.passw, self.andid]]):
+            self.myprint("ERROR: Incomplete credentials, could not login!")
+            return
 
-        if logged_in:
-            self.gpm_plli = self.gpm_client.get_all_user_playlist_contents() # list of gpm-playlists
+        self.gpm_client    = gmusicapi.Mobileclient()
+        self.gpm_logged_in = self.gpm_client.login(self.email, self.passw, self.andid, locale="de_DE")
+        if self.gpm_logged_in:
+            self.update_playlists()
         else:
-            self.myprint("ERROR: Could not login to Google!")
-
-        return logged_in
+            self.myprint("ERROR: Could not login!")
+        return self.gpm_logged_in
 
 
     def get_rfid_data(self, cli=None, raw=False, quit_on_uid=None, debug=False):
@@ -267,17 +310,20 @@ class lidabox:
 
 
     def token_is_valid(self):
-        """Check if token is a valid Google-Play-Music playlist name."""
-        pl_names = [pl["name"].lower() for pl in self.gpm_plli]
-        return str(self.token).lower() in pl_names
+        """Check if token is a valid playlist name."""
+        if self.token != None and not str(self.token).lower() in self.get_playlists_names(): # not found locally, check Google-Play-Music
+            self.login_gpm()
+        return str(self.token).lower() in self.get_playlists_names()
 
 
     def token_to_tracks(self):
         """Fill up playlist according to current token."""
         if self.token_is_valid():
-            found_pl = self.token_to_tracks_local()
-            if not found_pl:
-                self.token_to_tracks_streaming()
+            self.tracks = []
+            for pl in self.playlists:
+                if str(self.token).lower() in pl["name"].lower():
+                    self.tracks = list(pl["tracks"]) # list-items are still pointer! (copy.deepcopy would be too slow)
+                    break
             self.myprint("Playlist has {} titles.".format(len(self.tracks)))
             self.halt = True
         else:
@@ -285,46 +331,11 @@ class lidabox:
             self.stop_and_clear()
 
 
-    def token_to_tracks_local(self):
-        """Fill up playlist according to current token using local files."""
-        if self.token_is_valid():
-            found_pl = False
-            for pl_nam in os.listdir(self.mediadir):
-                pl_pth = os.path.join(self.mediadir, pl_nam)
-                if os.path.isdir(pl_pth) and str(self.token).lower() in pl_nam.lower():
-                    found_pl = True
-                    self.tracks    = []
-                    for fnam in sorted(os.listdir(pl_pth)):
-                        tnam,fext = os.path.splitext(fnam)
-                        if fext.lower() in [".mp3", ".wav", ".ogg"]:
-                            tra = {}
-                            tra["url"] = os.path.join(".", self.mediadir, pl_nam, fnam)
-                            tra["islocal"] = True
-                            tra["track"] = {}
-                            tra["track"]["title"] = tnam
-                            self.tracks.append(tra)
-                    break
-            return found_pl
-
-
-    def token_to_tracks_streaming(self):
-        """Fill up playlist according to current token using gpm."""
-        if self.token_is_valid():
-            found_pl = False
-            for pl in self.gpm_plli:
-                if str(self.token).lower() in pl["name"].lower():
-                    found_pl = True
-                    self.tracks = list(pl["tracks"]) # list-items are still pointer! (copy.deepcopy would be too slow)
-                    for tra in self.tracks:
-                        tra["url"]     = None
-                        tra["islocal"] = False
-                    break
-            return found_pl
-
-
     def track_fetch_url(self, ind=0):
         """Fetch VLC compatible streaming URL from Google-Play-Music."""
         if ind < 0 or ind > len(self.tracks)-1: # index out of range
+            return
+        if not self.gpm_logged_in: # should never happen
             return
 
         tra = self.tracks[ind]
@@ -363,10 +374,10 @@ class lidabox:
         self.token_last = self.token
 
         while len(self.tracks) > 0 and not self.halt:
-            if self.tracks[0].get("url", None) == None:
+            tra = self.tracks[0]
+            if not tra["islocal"] and tra.get("url", None) == None:
                 self.track_fetch_url(0) # fetch url for current title, if not already fetched
 
-            tra = self.tracks[0]
             url = tra["url"]
             tit = tra.get("track", {}).get("title", "UNKNOWN")
             tit = to_valid_str(tit)
@@ -392,17 +403,12 @@ class lidabox:
 
                 self.set_volume()
 
-#                play_time_url  = self.vlc_player.get_length()*1e-3 - 5 # 5 seconds before title ends
                 real_time_rfid = uptime.uptime() + 1
 
                 while self.vlc_player.get_state() in [vlc.State.Playing, vlc.State.Paused] and not self.halt:
                     time.sleep(.1)
 
                     self.time_last = self.vlc_player.get_time()
-
-#                    if self.time_last*1e-3 > play_time_url:
-#                        self.track_fetch_url(1) # prefetching url for next title
-#                        play_time_url += 10000
 
                     if uptime.uptime() > real_time_rfid:
                         self.update_token()
@@ -471,10 +477,6 @@ class lidabox:
 
     def loop(self):
         """Main loop of the LIdaBox."""
-        if not self.gpm_logged_in:
-            self.myprint("ERROR: Not connected with Google Play Musik!")
-            return None
-
         try:
             self.myprint("Waiting for token...")
             self.tlast = uptime.uptime()
@@ -500,9 +502,9 @@ class lidabox:
 if __name__ == "__main__":
     print "###################################################################"
 
+    tokdic = {"0.0.0.0.0": {"name": "MyPlaylistName", "volume": 80}} # Dict translating RFID-tag-UID to Google-Play-Music-playlist
     email = "yourname@gmail.com" # Google-Account-Username or -email
     passw = "abcdefghijklmnopqr" # Google-App-Password (https://support.google.com/accounts/answer/185833)
     andid = "0123456789abcdef"   # Valid Android-ID registered to given Google-Account
-    tokdic = {"0.0.0.0.0": {"name": "MyPlaylistName", "volume": 80}} # Dict translating RFID-tag-UID to Google-Play-Music-playlist
 
-    lidabox(email, passw, andid, tokdic, tmaxidle=3600, shtdwnpin=40)
+    lidabox(tokdic, email, passw, andid, tmaxidle=3600, shtdwnpin=40)
