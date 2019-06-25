@@ -55,7 +55,7 @@ class lidabox:
         self.play_mp3("start.mp3")
 
         self.myprint("Initializing VLC mediaplayer...")
-        self.vlc_player    = vlc.MediaPlayer()
+        self.vlc_player = vlc.MediaPlayer()
 
         self.myprint("Initializing RFID reader...")
         self.rfid_client = MFRC522.MFRC522()
@@ -87,7 +87,7 @@ class lidabox:
 
     def do_shutdown(self):
         print "Maximum idle-time reached. SHUTTING DOWN SYSTEM in 5s!"
-        self.play_mp3("shutdown.mp3")
+        self.play_mp3("shutdown.mp3", block=False)
         time.sleep(5)
         if self.shtdwnpin != None:
             GPIO.output(self.shtdwnpin, GPIO.HIGH)
@@ -99,7 +99,7 @@ class lidabox:
             print text
 
 
-    def play_mp3(self, path, block=False):
+    def play_mp3(self, path, block=True):
         """Playback a local audio file."""
         if not os.path.exists(path):
             path = os.path.join(".", self.mediadir, path)
@@ -276,19 +276,19 @@ class lidabox:
             self.myprint("Token was removed.")
             self.stop_and_clear()
             if last_token_was_valid:
-                self.play_mp3("stop.mp3", block = True)
+                self.play_mp3("stop.mp3")
             self.myprint("Waiting for token...")
 
         else:
             self.myprint("Token detected: \"{}\" (UID: {}).".format(self.token, self.uid_to_str()))
             self.stop()
             if self.token_is_valid():
-                self.play_mp3("found.mp3", block = True)
+                self.play_mp3("found.mp3")
                 self.token_to_tracks()
             else:
                 self.myprint("Token invalid!")
                 self.stop_and_clear()
-                self.play_mp3("invalid.mp3", block = True)
+                self.play_mp3("invalid.mp3")
 
         self.tlast = uptime.uptime()
 
