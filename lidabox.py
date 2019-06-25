@@ -28,7 +28,7 @@ import RPi.GPIO as GPIO
 
 
 class lidabox:
-    def __init__(self, tokdic, email="", passw="", andid="", shtdwnpin=None, tmaxidle=None, instastart=True, debug=True):
+    def __init__(self, tokdic, email="", passw="", andid="", shtdwnpin=None, enablepin=None, tmaxidle=None, instastart=True, debug=True):
 
         self.email         = email
         self.passw         = passw
@@ -36,6 +36,7 @@ class lidabox:
         self.tokdic        = tokdic
         self.debug         = debug
         self.shtdwnpin     = shtdwnpin
+        self.enablepin     = enablepin
         self.tmaxidle      = tmaxidle # max idle time before system shuts down
         self.tlast         = None # time of last action
         self.uid           = None # UID of RFID-card
@@ -63,6 +64,8 @@ class lidabox:
         self.myprint("Setting up GPIO...")
         if self.shtdwnpin != None:
             GPIO.setup(self.shtdwnpin, GPIO.OUT)
+        if self.enablepin != None:
+            GPIO.setup(self.enablepin, GPIO.IN)
 
         self.myprint("Updating Playlists...")
         self.update_playlists()
@@ -92,6 +95,13 @@ class lidabox:
         if self.shtdwnpin != None:
             GPIO.output(self.shtdwnpin, GPIO.HIGH)
         os.system("shutdown -h now")
+
+
+    def get_enable_state(self):
+        if self.enablepin != None:
+            return (GPIO.input(self.enablepin) == GPIO.HIGH)
+        else:
+            return None
 
 
     def myprint(self, text):
@@ -250,6 +260,12 @@ class lidabox:
         """Update token depending on the returnvalue of the RFID-reader."""
         lastuid              = self.uid
         last_token_was_valid = self.token_is_valid()
+
+        if self.get_enable_state() == False:
+            if last_token_was_valid:
+                self.stop_and_clear()
+                self.myprint("Enablepin turned LOW.")
+            return
 
         data = self.get_rfid_data(quit_on_uid=self.uid)
 
