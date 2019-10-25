@@ -47,7 +47,7 @@ class lidabox:
         self.token_last    = None # last successfully recognized token
         self.track_last    = None # last track played
         self.time_last     = None # last time of last track played
-        self.mediadir      = "media"
+        self.mediadir      = os.path.join(".", "media")
         self.playlists     = []
         self.gpm_client    = None
         self.gpm_logged_in = False
@@ -72,7 +72,7 @@ class lidabox:
 
         self.myprint("Checking MP3s...")
         for path in ["start", "stop", "found", "invalid", "shutdown"]:
-            path = os.path.join(".", self.mediadir, path) + ".mp3"
+            path = os.path.join(self.mediadir, path) + ".mp3"
             if not os.path.exists(path):
                 print "WARNING: {} not found.".format(path)
 
@@ -112,7 +112,7 @@ class lidabox:
     def play_mp3(self, path, block=True):
         """Playback a local audio file."""
         if not os.path.exists(path):
-            path = os.path.join(".", self.mediadir, path)
+            path = os.path.join(self.mediadir, path)
         if os.path.exists(path):
             mp = vlc.MediaPlayer(path)
             mp.play()
@@ -137,7 +137,7 @@ class lidabox:
                     if fext.lower() in [".mp3", ".wav", ".ogg"]:
                         tra = {}
                         tra["islocal"] = True
-                        tra["url"]     = os.path.join(".", self.mediadir, pl_nam, fnam)
+                        tra["url"]     = os.path.join(self.mediadir, pl_nam, fnam)
                         tra["track"]   = {"title":tnam}
                         pl["tracks"].append(tra)
                 self.playlists.append(pl)
