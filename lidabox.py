@@ -28,11 +28,12 @@ import RPi.GPIO as GPIO
 
 
 class lidabox:
-    def __init__(self, tokdic, email="", passw="", andid="", shtdwnpin=None, enablepin=None, tmaxidle=None, instastart=True, debug=True):
+    def __init__(self, tokdic, email="", passw="", andid="", mediadir=None, shtdwnpin=None, enablepin=None, tmaxidle=None, instastart=True, debug=True):
 
         self.email         = email
         self.passw         = passw
         self.andid         = andid
+        self.mediadir      = mediadir
         self.tokdic        = tokdic
         self.debug         = debug
         self.shtdwnpin     = shtdwnpin
@@ -47,10 +48,12 @@ class lidabox:
         self.token_last    = None # last successfully recognized token
         self.track_last    = None # last track played
         self.time_last     = None # last time of last track played
-        self.mediadir      = os.path.join(".", "media")
         self.playlists     = []
         self.gpm_client    = None
         self.gpm_logged_in = False
+
+        if self.mediadir == None:
+            self.mediadir = os.path.join(os.path.dirname(__file__), "media")
 
         self.myprint("Starting LIdaBox...")
         self.play_mp3("start.mp3")
