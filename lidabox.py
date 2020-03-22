@@ -77,7 +77,7 @@ class lidabox:
         for path in ["start", "stop", "found", "invalid", "shutdown"]:
             path = os.path.join(self.mediadir, path) + ".mp3"
             if not os.path.exists(path):
-                print "WARNING: {} not found.".format(path)
+                print("WARNING: {} not found.".format(path))
 
         if instastart:
             self.loop()
@@ -88,11 +88,11 @@ class lidabox:
         if self.gpm_logged_in:
             self.gpm_client.logout()
         GPIO.cleanup()
-        print "LIdaBox stopped!"
+        print("LIdaBox stopped!")
 
 
     def do_shutdown(self):
-        print "Maximum idle-time reached. SHUTTING DOWN SYSTEM in 5s!"
+        print("Maximum idle-time reached. SHUTTING DOWN SYSTEM in 5s!")
         self.play_mp3("shutdown.mp3", block=False)
         time.sleep(5)
         if self.shtdwnpin != None:
@@ -109,7 +109,7 @@ class lidabox:
 
     def myprint(self, text):
         if self.debug:
-            print text
+            print(text)
 
 
     def play_mp3(self, path, block=True):
@@ -224,8 +224,8 @@ class lidabox:
             return data
 
         if debug:
-            print "---------------------------------------------------------------"
-            print "Card UID:    %s, %s, %s, %s" % (uid[0], uid[1], uid[2], uid[3])
+            print("---------------------------------------------------------------")
+            print("Card UID:    %s, %s, %s, %s"%(uid[0], uid[1], uid[2], uid[3]))
 
         blksiz = select_tag(cli, uid) # cli.MFRC522_SelectTag(uid) does the same, but spamms stdout
 
@@ -250,8 +250,8 @@ class lidabox:
         strdata = block_to_str(blkdata).strip()
 
         if debug:
-            print "Data (int): ", blkdata
-            print "Data (str): ", strdata
+            print("Data (int): ", blkdata)
+            print("Data (str): ", strdata)
 
         data["uid"]     = uid
         data["strdata"] = strdata
@@ -463,7 +463,7 @@ class lidabox:
             time.sleep(.01)
 
         if dms <= 0:
-            print "WARNING: Setting audio volume failed!"
+            print("WARNING: Setting audio volume failed!")
             return False
         else:
             return True
@@ -513,7 +513,7 @@ class lidabox:
             self.__del__()
             raise
 
-        print "Main loop finished."
+        print("Main loop finished.")
 
 
 #------------------------------------------------------------------------------
