@@ -372,6 +372,7 @@ class lidabox:
         """Playback all tracks in playlist."""
 
         def to_valid_str(stri):
+            stri = stri.replace("/","-").replace("\\","-")
             stri_new = ""
             for c in stri:
                 try:    stri_new += str(c)
