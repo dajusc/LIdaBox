@@ -391,17 +391,16 @@ class lidabox:
         settratime = False
         self.halt = False
 
-        if self.token != self.token_last:
-            if self.shuffle:
-                self.myprint("Shuffle is active.")
+        if self.shuffle:
+            self.myprint("Shuffle is active.")
+            if self.token != self.token_last:
                 self.randseed = random.random()
-                random.seed(self.randseed)
-                random.shuffle(self.tracks)
+            random.seed(self.randseed)
+            random.shuffle(self.tracks)
+
+        if self.token != self.token_last:
             self.myprint("Starting playlist...")
         else:
-            if self.shuffle:
-                self.myprint("Shuffle is active.")
-                random.shuffle(self.tracks)
             self.myprint("Continuing playlist...")
             self.tracks = self.tracks[self.track_last:]
             if self.time_last != None:
