@@ -42,7 +42,7 @@ class lidabox:
         self.tlast         = None # time of last action
         self.uid           = None # UID of RFID-card
         self.token         = None # name of item to be played (gpm-playlist-name)
-        self.volume        = 100 # playback volume (0 - 100)
+        self.volume        = 100  # playback volume (0 - 100)
         self.tracks        = []   # list of tracks (current playlist)
         self.tolreadfails  = 0    # tolerated RFID read fails
         self.token_last    = None # last successfully recognized token
@@ -313,7 +313,7 @@ class lidabox:
 
 
     def uid_to_str(self):
-        """If UID is contained in token dictionary, change token accordingly."""
+        """Return UID as dot-separated string"""
         return ".".join([str(i) for i in self.uid[:4]])
 
 
