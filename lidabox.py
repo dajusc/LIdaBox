@@ -25,6 +25,7 @@ import gmusicapi # pip install gmusicapi
 import vlc       # pip install python-vlc
 import time, uptime
 import RPi.GPIO as GPIO
+import random
 
 
 class lidabox:
@@ -330,8 +331,9 @@ class lidabox:
             return
         if not override and self.token != None:
             return
-        self.token  = self.tokdic.get(uid_str, {}).get("name", None)
-        self.volume = self.tokdic.get(uid_str, {}).get("volume", 100)
+        self.token   = self.tokdic.get(uid_str, {}).get("name", None)
+        self.volume  = self.tokdic.get(uid_str, {}).get("volume", 100)
+        self.shuffle = self.tokdic.get(uid_str, {}).get("shuffle", False)
 
 
     def token_is_valid(self):
@@ -390,8 +392,16 @@ class lidabox:
         self.halt = False
 
         if self.token != self.token_last:
+            if self.shuffle:
+                self.myprint("Shuffle is active.")
+                self.randseed = random.random()
+                random.seed(self.randseed)
+                random.shuffle(self.tracks)
             self.myprint("Starting playlist...")
         else:
+            if self.shuffle:
+                self.myprint("Shuffle is active.")
+                random.shuffle(self.tracks)
             self.myprint("Continuing playlist...")
             self.tracks = self.tracks[self.track_last:]
             if self.time_last != None:
@@ -526,9 +536,9 @@ class lidabox:
 #------------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    print "###################################################################"
+    print("##################################################################")
 
-    tokdic = {"0.0.0.0.0": {"name": "MyPlaylistName", "volume": 80}} # Dict translating RFID-tag-UID to Google-Play-Music-playlist
+    tokdic = {"0.0.0.0.0": {"name": "MyPlaylistName", "volume": 80, "shuffle": True}} # Dict translating RFID-tag-UID to playlist (GPM or local)
     email = "yourname@gmail.com" # Google-Account-Username or -email
     passw = "abcdefghijklmnopqr" # Google-App-Password (https://support.google.com/accounts/answer/185833)
     andid = "0123456789abcdef"   # Valid Android-ID registered to given Google-Account
