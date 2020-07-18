@@ -59,7 +59,7 @@ class lidabox:
         self.play_mp3("start.mp3")
 
         self.myprint("Initializing VLC mediaplayer...")
-        self.vlc_player = vlc.MediaPlayer()
+        self.vlc_player = vlc.MediaPlayer("")
 
         self.myprint("Initializing RFID reader...")
         self.rfid_client = MFRC522.MFRC522()
@@ -117,7 +117,13 @@ class lidabox:
         if not os.path.exists(path):
             path = os.path.join(self.mediadir, path)
         if os.path.exists(path):
-            mp = vlc.MediaPlayer(path)
+            if False: # Force alsa driver
+                it = vlc.Instance('--aout=alsa')
+                me = it.media_new(path)
+                mp = it.media_player_new()
+                mp.set_media(me)
+            else:
+                mp = vlc.MediaPlayer(path)
             mp.play()
             if block:
                 while mp.get_state() in [vlc.State.NothingSpecial, vlc.State.Opening, vlc.State.Buffering, vlc.State.Playing]:
