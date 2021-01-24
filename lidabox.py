@@ -4,8 +4,8 @@
 """@package lidabox
     ~~~ LIdaBox by David Schaefer for his daugther ~~~
 
-    A RasPi application for a RFID controlled Google-Play-Music (GPM) musicbox.
-    The user can store the names of GPM-playlists on RFID-tags, or he can link
+    A RasPi application for a RFID controlled musicbox.
+    The user can store the names of playlists on RFID-tags, or he can link
     RFID-tag-UIDs to playlist names. Once the RC522-RFID-reader attached to the
     RasPi detects a corresponding tag, it starts playing the playlist. The
     playback is stopped when the end of the playlist is reached or when the tag
@@ -21,7 +21,6 @@
 import os, sys, string
 sys.path.append('./MFRC522-python.git/')
 import MFRC522   # https://github.com/mxgxw/MFRC522-python - NOT PY3 COMPATIBLE!
-import gmusicapi # pip install gmusicapi
 import vlc       # pip install python-vlc
 import natsort # pip install natsort
 import time, uptime
@@ -30,11 +29,8 @@ import random
 
 
 class lidabox:
-    def __init__(self, tokdic, email="", passw="", andid="", mediadir=None, shtdwnpin=None, enablepin=None, tmaxidle=None, instastart=True, debug=True):
+    def __init__(self, tokdic, mediadir=None, shtdwnpin=None, enablepin=None, tmaxidle=None, instastart=True, debug=True):
 
-        self.email         = email
-        self.passw         = passw
-        self.andid         = andid
         self.mediadir      = mediadir
         self.tokdic        = tokdic
         self.debug         = debug
@@ -43,7 +39,7 @@ class lidabox:
         self.tmaxidle      = tmaxidle # max idle time before system shuts down
         self.tlast         = None # time of last action
         self.uid           = None # UID of RFID-card
-        self.token         = None # name of item to be played (gpm-playlist-name)
+        self.token         = None # name of item to be played (playlist-name)
         self.volume        = 100  # playback volume (0 - 100)
         self.tracks        = []   # list of tracks (current playlist)
         self.tolreadfails  = 0    # tolerated RFID read fails
@@ -51,8 +47,6 @@ class lidabox:
         self.track_last    = None # last track played
         self.time_last     = None # last time of last track played
         self.playlists     = []
-        self.gpm_client    = None
-        self.gpm_logged_in = False
 
         if self.mediadir == None:
             self.mediadir = os.path.join(os.path.dirname(__file__), "media")
@@ -87,8 +81,6 @@ class lidabox:
 
     def __del__(self):
         self.stop_and_clear()
-        if self.gpm_logged_in:
-            self.gpm_client.logout()
         GPIO.cleanup()
         print("LIdaBox stopped!")
 
@@ -134,7 +126,7 @@ class lidabox:
 
 
     def update_playlists(self):
-        """Update list of playlist using local files and (maybe) gpm."""
+        """Update list of playlist using local files"""
         self.playlists = []
 
         for pl_nam in os.listdir(self.mediadir): # update from local
@@ -147,42 +139,14 @@ class lidabox:
                     tnam,fext = os.path.splitext(fnam)
                     if fext.lower() in [".mp3", ".wav", ".ogg"]:
                         tra = {}
-                        tra["islocal"] = True
                         tra["url"]     = os.path.join(self.mediadir, pl_nam, fnam)
                         tra["track"]   = {"title":tnam}
                         pl["tracks"].append(tra)
                 self.playlists.append(pl)
 
-        if self.gpm_logged_in: # update from gpm
-            gpm_pls = self.gpm_client.get_all_user_playlist_contents()
-            for pl in gpm_pls:
-                for tra in pl["tracks"]:
-                    tra["islocal"] = False
-                    tra["url"]     = None
-            self.playlists += gpm_pls
-
 
     def get_playlists_names(self):
         return [pl["name"].lower() for pl in self.playlists]
-
-
-    def login_gpm(self):
-        """Log into Google and fetch all user playlits from Google Play Music."""
-        self.myprint("Connecting to Google Play Musik...")
-        if self.gpm_logged_in: # already logged in
-            self.myprint("WARNING: Already logged in.")
-            return
-        if any([s == "" for s in [self.email, self.passw, self.andid]]):
-            self.myprint("ERROR: Incomplete credentials, could not login!")
-            return
-
-        self.gpm_client    = gmusicapi.Mobileclient()
-        self.gpm_logged_in = self.gpm_client.login(self.email, self.passw, self.andid, locale="de_DE")
-        if self.gpm_logged_in:
-            self.update_playlists()
-        else:
-            self.myprint("ERROR: Could not login!")
-        return self.gpm_logged_in
 
 
     def get_rfid_data(self, cli=None, raw=False, quit_on_uid=None, debug=False):
@@ -339,8 +303,6 @@ class lidabox:
 
     def token_is_valid(self):
         """Check if token is a valid playlist name."""
-        if self.token != None and not str(self.token).lower() in self.get_playlists_names(): # not found locally, check Google-Play-Music
-            self.login_gpm()
         return str(self.token).lower() in self.get_playlists_names()
 
 
@@ -357,24 +319,6 @@ class lidabox:
         else:
             self.myprint("ERROR: Playlist not found!")
             self.stop_and_clear()
-
-
-    def track_fetch_url(self, ind=0):
-        """Fetch VLC compatible streaming URL from Google-Play-Music."""
-        if ind < 0 or ind > len(self.tracks)-1: # index out of range
-            return
-        if not self.gpm_logged_in: # should never happen
-            return
-
-        tra = self.tracks[ind]
-        tid = tra.get("storeId", tra.get("trackId", tra.get("id", tra.get("nid", None))))
-        try:
-            url = self.gpm_client.get_stream_url(tid, self.andid)
-        except:
-            url = None
-            self.myprint("WARNING: Could not get URL for title \"{}\"".format(tra.get("title", "UNKNOWN")))
-
-        self.tracks[ind]["url"] = url
 
 
     def play_tracks(self):
@@ -411,8 +355,6 @@ class lidabox:
 
         while len(self.tracks) > 0 and not self.halt:
             tra = self.tracks[0]
-            if not tra["islocal"] and tra.get("url", None) == None:
-                self.track_fetch_url(0) # fetch url for current title, if not already fetched
 
             url = tra["url"]
             tit = tra.get("track", {}).get("title", "UNKNOWN")
@@ -420,13 +362,10 @@ class lidabox:
 
             tranow = tramax - len(self.tracks)
             self.track_last = tranow
-            self.myprint("Playing title {}/{} \"{}\" ({})".format(tranow+1 , tramax, tit, ["Stream","MP3"][int(tra["islocal"])]))
+            self.myprint("Playing title {}/{} \"{}\" ({})".format(tranow+1 , tramax, tit, url))
             if url != None:
-                if tra["islocal"]:
-                    self.vlc_player = vlc.MediaPlayer(url)
-                else:
-                    self.vlc_player.stop()
-                    self.vlc_player.set_mrl(url)
+
+                self.vlc_player = vlc.MediaPlayer(url)
                 self.vlc_player.play()
 
                 if settratime:
@@ -538,9 +477,8 @@ class lidabox:
 if __name__ == "__main__":
     print("##################################################################")
 
-    tokdic = {"0.0.0.0.0": {"name": "MyPlaylistName", "volume": 80, "shuffle": True}} # Dict translating RFID-tag-UID to playlist (GPM or local)
-    email = "yourname@gmail.com" # Google-Account-Username or -email
-    passw = "abcdefghijklmnopqr" # Google-App-Password (https://support.google.com/accounts/answer/185833)
-    andid = "0123456789abcdef"   # Valid Android-ID registered to given Google-Account
+    tokdic = {"0.0.0.0": {"name": "MyStoryPlaylistName", "volume": 100},
+              "0.0.0.1": {"name": "MyMusicPlaylistName", "volume": 75, "shuffle": True},
+              } # Dict translating RFID-tag-UID to playlist
 
-    lidabox(tokdic, email, passw, andid, tmaxidle=3600, shtdwnpin=40)
+    lidabox(tokdic, tmaxidle=3600, shtdwnpin=40)
