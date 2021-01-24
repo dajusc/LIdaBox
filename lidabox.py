@@ -349,7 +349,7 @@ class lidabox:
         if self.token_is_valid():
             self.tracks = []
             for pl in self.playlists:
-                if str(self.token).lower() in pl["name"].lower():
+                if str(self.token).lower() == pl["name"].lower():
                     self.tracks = list(pl["tracks"]) # list-items are still pointer! (copy.deepcopy would be too slow)
                     break
             self.myprint("Playlist has {} titles.".format(len(self.tracks)))
