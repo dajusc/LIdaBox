@@ -20,9 +20,10 @@
 
 import os, sys, string
 sys.path.append('./MFRC522-python.git/')
-import MFRC522   # https://github.com/mxgxw/MFRC522-python
+import MFRC522   # https://github.com/mxgxw/MFRC522-python - NOT PY3 COMPATIBLE!
 import gmusicapi # pip install gmusicapi
 import vlc       # pip install python-vlc
+import natsort # pip install natsort
 import time, uptime
 import RPi.GPIO as GPIO
 import random
@@ -142,7 +143,7 @@ class lidabox:
                 pl = {}
                 pl["name"]   = pl_nam
                 pl["tracks"] = []
-                for fnam in sorted(os.listdir(pl_pth)):
+                for fnam in natsort.natsorted(os.listdir(pl_pth)):
                     tnam,fext = os.path.splitext(fnam)
                     if fext.lower() in [".mp3", ".wav", ".ogg"]:
                         tra = {}
