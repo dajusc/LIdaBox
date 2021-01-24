@@ -373,7 +373,7 @@ class lidabox:
                 self.vlc_player.play()
 
                 if settratime:
-                    self.time_last = max(0, self.time_last - 3000)
+                    self.time_last = max(0, self.time_last - 2000)
                     self.vlc_player.set_time(self.time_last)
                     settratime = False
 
