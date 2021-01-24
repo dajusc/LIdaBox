@@ -271,8 +271,12 @@ class lidabox:
             self.myprint("Waiting for token...")
 
         else:
-            self.myprint("Token detected: \"{}\" (UID: {}).".format(self.token, self.uid_to_str()))
-            self.stop()
+            if lastuid == None:
+                self.myprint("Token detected: \"{}\" (UID: {}).".format(self.token, self.uid_to_str()))
+                self.stop()
+            else:
+                self.myprint("Token was swapped with: \"{}\" (UID: {}).".format(self.token, self.uid_to_str()))
+                self.stop_and_clear()
             if self.token_is_valid():
                 self.play_mp3("found.mp3")
                 self.token_to_tracks()
