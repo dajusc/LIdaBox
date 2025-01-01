@@ -26,16 +26,20 @@ import natsort # pip install natsort
 import time, uptime
 import RPi.GPIO as GPIO
 import random
+import signal
+
+GPIO.setmode(GPIO.BOARD) # required/set by MFRC522
 
 
 class lidabox:
-    def __init__(self, tokdic, mediadir=None, shtdwnpin=None, enablepin=None, tmaxidle=None, instastart=True, debug=True):
+    def __init__(self, tokdic, mediadir=None, shtdwnpin=None, enablepin=None, skippin=None, tmaxidle=None, instastart=True, debug=True):
 
         self.mediadir      = mediadir
         self.tokdic        = tokdic
         self.debug         = debug
         self.shtdwnpin     = shtdwnpin
         self.enablepin     = enablepin
+        self.skippin       = skippin
         self.tmaxidle      = tmaxidle # max idle time before system shuts down
         self.tlast         = None # time of last action
         self.uid           = None # UID of RFID-card
@@ -65,6 +69,10 @@ class lidabox:
             GPIO.setup(self.shtdwnpin, GPIO.OUT)
         if self.enablepin != None:
             GPIO.setup(self.enablepin, GPIO.IN)
+        if self.skippin != None:
+            GPIO.setup(self.skippin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+            GPIO.add_event_detect(self.skippin, GPIO.FALLING, callback=self.button_skip_cb, bouncetime=1000)
+            signal.signal(signal.SIGINT, self.signal_handler)
 
         self.myprint("Updating Playlists...")
         self.update_playlists()
@@ -83,6 +91,15 @@ class lidabox:
         self.stop_and_clear()
         GPIO.cleanup()
         print("LIdaBox stopped!")
+
+
+    def signal_handler(self, sig, frame):
+        GPIO.cleanup()
+        sys.exit(0)
+
+
+    def button_skip_cb(self, channel):
+        self.skip = True
 
 
     def do_shutdown(self):
@@ -339,6 +356,7 @@ class lidabox:
         tramax = len(self.tracks)
         settratime = False
         self.halt = False
+        self.skip = False
 
         if self.shuffle:
             self.myprint("Shuffle is active.")
@@ -392,6 +410,11 @@ class lidabox:
                     if uptime.uptime() > real_time_rfid:
                         self.update_token()
                         real_time_rfid = uptime.uptime() + 1
+
+                    if self.skip:
+                        self.skip = False
+                        self.vlc_player.stop()
+                        break
 
                 if self.vlc_player.get_state() in [vlc.State.Error]:
                     self.myprint("ERROR: Playback of title stopped unexpectingly!")
@@ -485,4 +508,4 @@ if __name__ == "__main__":
               "0.0.0.1": {"name": "MyMusicPlaylistName", "volume": 75, "shuffle": True},
               } # Dict translating RFID-tag-UID to playlist
 
-    lidabox(tokdic, tmaxidle=3600, shtdwnpin=40)
+    lidabox(tokdic, tmaxidle=3600, shtdwnpin=40, skippin=7)
