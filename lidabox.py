@@ -293,7 +293,11 @@ class lidabox:
                 self.stop()
             else:
                 self.myprint("Token was swapped with: \"{}\" (UID: {}).".format(self.token, self.uid_to_str()))
-                self.stop_and_clear()
+                self.stop()
+                self.tracks = []
+                if last_token_was_valid:
+                    self.play_mp3("stop.mp3")
+
             if self.token_is_valid():
                 self.play_mp3("found.mp3")
                 self.token_to_tracks()
